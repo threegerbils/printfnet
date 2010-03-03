@@ -10,8 +10,8 @@ namespace printf {
 	public class FormatObject {
 		public class FormatStringPart {
 			public Flags flags;
-			public int? width;
-			public int precision = 1;
+			public int width = 0;
+			public int precision = 6;
 			public char length;
 			public char specifier;
 		}
@@ -25,7 +25,7 @@ namespace printf {
 
 		[Flags]
 		public enum Flags {
-			LeftJustify, ForcePlus, BlankIfPlus, PrecedingSpecial, LeftPadZero
+			LeftAlign = 1, ForcePlus = 2, BlankIfPlus = 4, PrecedingSpecial = 8, LeftPadZero = 16
 		}
 
 		enum ParseMode {
@@ -70,21 +70,21 @@ namespace printf {
 							mode = ParseMode.Static;
 							continue;
 						}
-						part = new FormatStringPart();
+						if (part == null) part = new FormatStringPart();
 						if (c == '-') {
-							part.flags &= Flags.LeftJustify;
+							part.flags |= Flags.LeftAlign;
 						}
 						else if (c == '+') {
-							part.flags &= Flags.ForcePlus;
+							part.flags |= Flags.ForcePlus;
 						}
 						else if (c == ' ') {
-							part.flags &= Flags.BlankIfPlus;
+							part.flags |= Flags.BlankIfPlus;
 						}
 						else if (c == '#') {
-							part.flags &= Flags.PrecedingSpecial;
+							part.flags |= Flags.PrecedingSpecial;
 						}
 						else if (c == '0') {
-							part.flags &= Flags.LeftPadZero;
+							part.flags |= Flags.LeftPadZero;
 						}
 						else {
 							step = FormatStep.Width;
@@ -168,7 +168,7 @@ namespace printf {
 						staticParts.Add(staticPart.ToString());
 						staticPart = new StringBuilder();
 						parts.Add(part);
-						part = new FormatStringPart();
+						part = null;
 
 						mode = ParseMode.Static;
 						break;
@@ -199,6 +199,7 @@ namespace printf {
 		}
 
 		public delegate string Formatter(FormatStringPart part, object arg);
+
 		Dictionary<char, Formatter> formatters = new Dictionary<char, Formatter>();
 
 		public void AddFormatter(char specifier, Formatter formatter) {
@@ -223,7 +224,20 @@ namespace printf {
 						f.width = (int)args[j];
 						j++;
 					}
-					final.Append(formatters[f.specifier].Invoke(f, args[j]));
+					string afterSpecifiers = formatters[f.specifier].Invoke(f, args[j]);
+					int pad = f.width - afterSpecifiers.Length;
+					if (pad > 0 && (f.flags & Flags.LeftAlign) == 0) {
+						if ((f.flags & Flags.LeftPadZero) != 0) {
+							final.Append(new string('0', pad));
+						}
+						else {
+							final.Append(new string(' ', pad));
+						}
+					}
+					final.Append(afterSpecifiers);
+					if (pad > 0 && (f.flags & Flags.LeftAlign) != 0) {
+						final.Append(new string(' ', pad));
+					}
 				}
 				final.Append(staticParts[staticParts.Length-1]);
 				finalString = final.ToString();
@@ -239,6 +253,9 @@ namespace printf {
 		}
 
 		private void LoadDefaultFormatters() {
+			var format = new System.Globalization.NumberFormatInfo();
+			format.NumberDecimalSeparator = ".";
+				
 			Formatter charFormatter = (part, arg) => {
 				char c = (char)arg;
 				return c.ToString();
@@ -246,24 +263,45 @@ namespace printf {
 			AddFormatter('c', charFormatter);
 			Formatter intFormatter = (part, arg) => {
 				long i = Convert.ToInt64(arg);
-				return i.ToString();
+				string sign = "";
+				if (i >= 0) {
+					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
+					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+				}
+				return sign + i.ToString();
 			};
 			AddFormatter('i', intFormatter);
 			AddFormatter('d', intFormatter);
 			Formatter uintFormatter = (part, arg) => {
 				ulong u = Convert.ToUInt64(arg);
-				return u.ToString();
+				string sign = "";
+				if (u >= 0) {
+					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
+					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+				}
+				return sign + u.ToString();
 			};
 			AddFormatter('u', uintFormatter);
 			Formatter sciFormatter = (part, arg) => {
 				double d = Convert.ToDouble(arg);
-				return d.ToString();
+				string sign = "";
+				if (d >= 0) {
+					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
+					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+				}
+				return sign + d.ToString();
 			};
 			AddFormatter('e', sciFormatter);
 			AddFormatter('E', sciFormatter);
 			Formatter floatFormatter = (part, arg) => {
 				double d = Convert.ToDouble(arg);
-				return d.ToString();
+				string sign = "";
+				if (d >= 0) {
+					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
+					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+				}
+				format.NumberDecimalDigits = part.precision;
+				return sign + d.ToString("f", format);
 			};
 			AddFormatter('f', floatFormatter);
 			Formatter octFormatter = (part, arg) => {
@@ -272,10 +310,24 @@ namespace printf {
 			};
 			AddFormatter('o', octFormatter);
 			Formatter hexFormatter = (part, arg) => {
-				long l = Convert.ToInt64(arg);
-				return string.Format(
-				           part.specifier == 'x' ? "{0:x}" : "{0:X}",
-				           l);
+				if (part.length == 'h') {
+					short s = Convert.ToInt16(arg);
+					return string.Format(
+					           part.specifier == 'x' ? "{0:x}" : "{0:X}",
+					           s);
+				}
+				else if (part.length == 'l') {
+					long l = Convert.ToInt64(arg);
+					return string.Format(
+					           part.specifier == 'x' ? "{0:x}" : "{0:X}",
+					           l);
+				}
+				else {
+					int i = Convert.ToInt32(arg);
+					return string.Format(
+					           part.specifier == 'x' ? "{0:x}" : "{0:X}",
+					           i);
+				}
 			};
 			AddFormatter('x', hexFormatter);
 			AddFormatter('X', hexFormatter);
