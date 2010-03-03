@@ -198,7 +198,7 @@ namespace printf {
 			this.finalString = null;
 		}
 
-		public delegate string Formatter(FormatStringPart part, object arg);
+		public delegate FormatResult Formatter(FormatStringPart part, object arg);
 
 		Dictionary<char, Formatter> formatters = new Dictionary<char, Formatter>();
 
@@ -224,17 +224,22 @@ namespace printf {
 						f.width = (int)args[j];
 						j++;
 					}
-					string afterSpecifiers = formatters[f.specifier].Invoke(f, args[j]);
-					int pad = f.width - afterSpecifiers.Length;
+					FormatResult afterSpecifiers = formatters[f.specifier].Invoke(f, args[j]);
+					int pad = f.width - afterSpecifiers.Format.Length - afterSpecifiers.Sign.Length;
 					if (pad > 0 && (f.flags & Flags.LeftAlign) == 0) {
 						if ((f.flags & Flags.LeftPadZero) != 0) {
+							final.Append(afterSpecifiers.Sign);
 							final.Append(new string('0', pad));
 						}
 						else {
 							final.Append(new string(' ', pad));
+							final.Append(afterSpecifiers.Sign);
 						}
 					}
-					final.Append(afterSpecifiers);
+					else {
+						final.Append(afterSpecifiers.Sign);
+					}
+					final.Append(afterSpecifiers.Format);
 					if (pad > 0 && (f.flags & Flags.LeftAlign) != 0) {
 						final.Append(new string(' ', pad));
 					}
@@ -252,10 +257,21 @@ namespace printf {
 			return finalString;
 		}
 
+		public struct FormatResult {
+			public string Sign {get; set;}
+			public string Format {get; set;}
+
+			public static implicit operator FormatResult(string s) {
+				return new FormatResult {
+					Sign = "", Format = s
+				};
+			}
+		}
+
 		private void LoadDefaultFormatters() {
 			var format = new System.Globalization.NumberFormatInfo();
 			format.NumberDecimalSeparator = ".";
-				
+
 			Formatter charFormatter = (part, arg) => {
 				char c = (char)arg;
 				return c.ToString();
@@ -268,7 +284,11 @@ namespace printf {
 					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
 					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
 				}
-				return sign + i.ToString();
+				else {
+					i = -i;
+					sign = "-";
+				}
+				return new FormatResult { Format = i.ToString(), Sign = sign };
 			};
 			AddFormatter('i', intFormatter);
 			AddFormatter('d', intFormatter);
@@ -279,7 +299,7 @@ namespace printf {
 					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
 					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
 				}
-				return sign + u.ToString();
+				return new FormatResult { Format = u.ToString(), Sign = sign };
 			};
 			AddFormatter('u', uintFormatter);
 			Formatter sciFormatter = (part, arg) => {
@@ -289,7 +309,11 @@ namespace printf {
 					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
 					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
 				}
-				return sign + d.ToString();
+				else {
+					d = -d;
+					sign = "-";
+				}
+				return new FormatResult { Format = d.ToString(), Sign = sign };
 			};
 			AddFormatter('e', sciFormatter);
 			AddFormatter('E', sciFormatter);
@@ -300,8 +324,12 @@ namespace printf {
 					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
 					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
 				}
+				else {
+					d = -d;
+					sign = "-";
+				}
 				format.NumberDecimalDigits = part.precision;
-				return sign + d.ToString("f", format);
+				return new FormatResult { Format = d.ToString("f", format), Sign = sign };
 			};
 			AddFormatter('f', floatFormatter);
 			Formatter octFormatter = (part, arg) => {

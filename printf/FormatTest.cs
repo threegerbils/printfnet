@@ -111,6 +111,9 @@ namespace printf {
 			//Width specified on the argument list
 			Assert.AreEqual("    11",
 			                Printf.sprintf("%*d", 6, 11));
+			//Sign with padding
+			Assert.AreEqual("   -1 -0001  0001",
+			                Printf.sprintf("%5d %05d % 05d", -1, -1, 1));
 		}
 
 		[Test]
@@ -121,11 +124,9 @@ namespace printf {
 			//Positive signs
 			Assert.AreEqual("3 +4",
 			                Printf.sprintf("%d %+d", 3, 4));
-
 			//Sign is not printed for o x and X
 			Assert.AreEqual("610 ffffffff FFFFFFFF",
 			                Printf.sprintf("%+o %+x %+X", Convert.ToInt32("0610", 8), -1, -1));
-			
 			//Insert space if there is no sign
 			Assert.AreEqual("-11  22",
 			                Printf.sprintf("% d % d", -11, 22));
