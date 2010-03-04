@@ -313,7 +313,8 @@ namespace printf {
 					d = -d;
 					sign = "-";
 				}
-				return new FormatResult { Format = d.ToString(), Sign = sign };
+				format.NumberDecimalDigits = part.precision;
+				return new FormatResult { Format = d.ToString(part.specifier.ToString(), format), Sign = sign };
 			};
 			AddFormatter('e', sciFormatter);
 			AddFormatter('E', sciFormatter);

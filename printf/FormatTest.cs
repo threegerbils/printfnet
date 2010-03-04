@@ -18,9 +18,10 @@ namespace printf {
 			                Printf.sprintf("%d", 121));
 			Assert.AreEqual("-34",
 			                Printf.sprintf("%i", -34));
-			//TODO: double format string
-			//Assert.AreEqual("3.1234e+2",
-			//                Printf.sprintf("%e", 3.1234e2));
+			Assert.AreEqual("3.123400e+002",
+			                Printf.sprintf("%e", 3.1234e02));
+			Assert.AreEqual("3.123400E+002",
+			                Printf.sprintf("%E", 3.1234e02));
 			Assert.AreEqual("3.123000",
 			                Printf.sprintf("%f", 3.123));
 			Assert.AreEqual("610",
