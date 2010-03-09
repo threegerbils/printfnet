@@ -197,6 +197,19 @@ namespace printf {
 			Assert.AreEqual("   asd",
 			                Printf.sprintf("%6.3s", "asdfjkl"));
 		}
+		
+		[Test]
+		public void TestHashMark() {
+			//Prefix for o, h and H
+			Assert.AreEqual("011 0xff 0XABC",
+			                Printf.sprintf("%#o %#x %#X", 9, 0xff, 0xabc));
+			
+			//Decimal point for f, e and E
+			Assert.AreEqual("1. 2.e+000 3.E+000",
+			                Printf.sprintf("%#.0f %#.0e %#.0E", 1.1, 2.1, 3.1));
+			Assert.AreEqual("1.1 2.1e+000 3.1E+000",
+			                Printf.sprintf("%#.1f %#.1e %#.1E", 1.1, 2.1, 3.1));
+		}
 	}
 }
 #endif

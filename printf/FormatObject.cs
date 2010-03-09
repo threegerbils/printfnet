@@ -27,7 +27,7 @@ namespace printf {
 
 		[Flags]
 		public enum Flags {
-			LeftAlign = 1, ForcePlus = 2, BlankIfPlus = 4, PrecedingSpecial = 8, LeftPadZero = 16
+			LeftAlign = 1, ForcePlus = 2, BlankIfPlus = 4, HashMark = 8, LeftPadZero = 16
 		}
 
 		enum ParseMode {
@@ -83,7 +83,7 @@ namespace printf {
 							part.flags |= Flags.BlankIfPlus;
 						}
 						else if (c == '#') {
-							part.flags |= Flags.PrecedingSpecial;
+							part.flags |= Flags.HashMark;
 						}
 						else if (c == '0') {
 							part.flags |= Flags.LeftPadZero;
@@ -325,12 +325,18 @@ namespace printf {
 					d = -d;
 					sign = "-";
 				}
+				string retStr = d.ToString(string.Concat("0.",
+				                           new string('0', part.precision ?? DefaultPrecision),
+				                           part.specifier.ToString(),
+				                           "+000"),
+				                           format);
+				//# flag: place decimal point even if not needed
+				if ((part.flags & Flags.HashMark) != 0 && !retStr.Contains(format.NumberDecimalSeparator)) {
+					retStr = string.Join(format.NumberDecimalSeparator + part.specifier,
+					                     retStr.Split(part.specifier));
+				}
 				return new FormatResult {
-					Format = d.ToString(string.Concat("0.",
-					                                  new string('0', part.precision ?? DefaultPrecision),
-					                                  part.specifier.ToString(),
-					                                  "+000"),
-					                    format),
+					Format = retStr,
 					Sign = sign
 				};
 			};
@@ -348,12 +354,24 @@ namespace printf {
 					sign = "-";
 				}
 				format.NumberDecimalDigits = part.precision ?? DefaultPrecision;
-				return new FormatResult { Format = d.ToString("f", format), Sign = sign };
+				string retStr = d.ToString("f", format);
+				//# flag: place decimal point even if not needed
+				if ((part.flags & Flags.HashMark) != 0 && !retStr.Contains(format.NumberDecimalSeparator)) {
+					retStr += format.NumberDecimalSeparator;
+				}
+				return new FormatResult { Format = retStr, Sign = sign };
 			};
 			AddFormatter('f', floatFormatter);
 			Formatter octFormatter = (part, arg) => {
 				long l = Convert.ToInt64(arg);
-				return IntPrecision(Convert.ToString(l, 8), part);
+				string retStr = IntPrecision(Convert.ToString(l, 8), part);
+				//# flag: put a 0 before tha number
+				if ((part.flags & Flags.HashMark) != 0) {
+					return "0" + retStr;
+				}
+				else {
+					return retStr;
+				}
 			};
 			AddFormatter('o', octFormatter);
 			Formatter hexFormatter = (part, arg) => {
@@ -376,7 +394,13 @@ namespace printf {
 					             part.specifier == 'x' ? "{0:x}" : "{0:X}",
 					             i);
 				}
-				return IntPrecision(retStr, part);
+				//# flag: put a 0x before tha number
+				if ((part.flags & Flags.HashMark) != 0) {
+					return "0" + part.specifier + IntPrecision(retStr, part);
+				}
+				else {
+					return IntPrecision(retStr, part);
+				}
 			};
 			AddFormatter('x', hexFormatter);
 			AddFormatter('X', hexFormatter);
