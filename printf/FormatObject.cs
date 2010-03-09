@@ -5,30 +5,36 @@ using System.Text;
 
 namespace printf {
 	/// <summary>
-	/// Description of FormatObject.
+	/// Applies string formatting to objects using a "printf" format string.
+	/// Can be extended to use custom formats.
 	/// </summary>
 	public class FormatObject {
 		public const int DefaultPrecision = 6;
 
 		public class FormatStringPart {
-			public Flags flags;
 			public int width = 0;
 			public int? precision;
 			public char length;
 			public char specifier;
+
+			public bool LeftAlign = false;
+			public bool ForcePlus = false;
+			public bool BlankIfPlus = false;
+			public bool HashMark = false;
+			public bool PadWithZero = false;
 		}
 
+		//List of actual arguments
 		List<object> args = new List<object>();
+
+		//Number of required arguments
 		int argCount = 0;
+
+		//Format string parts
 		FormatStringPart[] parts;
 		string[] staticParts;
 
 		string finalString;
-
-		[Flags]
-		public enum Flags {
-			LeftAlign = 1, ForcePlus = 2, BlankIfPlus = 4, HashMark = 8, LeftPadZero = 16
-		}
 
 		enum ParseMode {
 			Static, Format
@@ -37,15 +43,28 @@ namespace printf {
 			Flags, Width, PrecisionStart, Precision, Length, Specifier
 		}
 
+		/// <summary>
+		/// Creates a new formatter with the default formatters (used by the printf functions).
+		/// </summary>
+		/// <param name="format"></param>
 		public FormatObject(string format): this(format, true) {}
 
+		/// <summary>
+		/// Creates a new formatter with or without the default formatters (used by the printf functions).
+		/// </summary>
+		/// <param name="format">The format string</param>
+		/// <param name="useDefaultFormatters">Load the default formatters or not</param>
 		public FormatObject(string format, bool useDefaultFormatters) {
-			//Parse format string
+
+			//State machine to parse the format string
+			//Surprisingly, the regexp version is not really shorter:
+			//Parsing the string is easier, but extracting the results is longer
+
 			List<FormatStringPart> parts = new List<FormatStringPart>();
 			List<string> staticParts = new List<string>();
 			StringBuilder staticPart = new StringBuilder();
 
-
+			//Static mode: not in a % block, Format mode: in a % block
 			ParseMode mode = ParseMode.Static;
 			FormatStringPart part = null;
 			FormatStep step = FormatStep.Flags;
@@ -65,6 +84,7 @@ namespace printf {
 					}
 				}
 				else {
+					//For the terminology (flags, specifiers etc.) look up any printf documentation.
 					switch (step) {
 					case FormatStep.Flags:
 						if (c == '%') {
@@ -74,19 +94,19 @@ namespace printf {
 						}
 						if (part == null) part = new FormatStringPart();
 						if (c == '-') {
-							part.flags |= Flags.LeftAlign;
+							part.LeftAlign = true;
 						}
 						else if (c == '+') {
-							part.flags |= Flags.ForcePlus;
+							part.ForcePlus = true;
 						}
 						else if (c == ' ') {
-							part.flags |= Flags.BlankIfPlus;
+							part.BlankIfPlus = true;
 						}
 						else if (c == '#') {
-							part.flags |= Flags.HashMark;
+							part.HashMark = true;
 						}
 						else if (c == '0') {
-							part.flags |= Flags.LeftPadZero;
+							part.PadWithZero = true;
 						}
 						else {
 							step = FormatStep.Width;
@@ -188,22 +208,36 @@ namespace printf {
 			if (useDefaultFormatters) LoadDefaultFormatters();
 		}
 
-
-		public void Add(params object[] objs) {
+		/// <summary>
+		/// Set the objects to format.
+		/// If they are already set, the function will overwrite them.
+		/// This is useful if you want to use the same format string to
+		/// format many objects.
+		/// </summary>
+		/// <param name="objs">The list of objects</param>
+		public void SetArgs(params object[] objs) {
 			for (int i = 0; i < objs.Length; ++i) {
 				args.Add(objs[i]);
 			}
 			this.finalString = null;
 		}
-		public void Clear() {
-			this.args.Clear();
-			this.finalString = null;
-		}
 
+		/// <summary>
+		/// Formats the object according to the FormatStringPart argument.
+		/// If you create a custom formatter, you should ignore the width property,
+		/// as padding is done independently for all format types.
+		/// </summary>
+		/// <param name="part">It contains the flags, specifier etc.</param>
+		/// <param name="arg">The object to format</param>
 		public delegate FormatResult Formatter(FormatStringPart part, object arg);
 
 		Dictionary<char, Formatter> formatters = new Dictionary<char, Formatter>();
 
+		/// <summary>
+		/// Adds a custom formatter.
+		/// </summary>
+		/// <param name="specifier">The character in the format string (e.g. 's' for %s)</param>
+		/// <param name="formatter">The formatter function</param>
 		public void AddFormatter(char specifier, Formatter formatter) {
 			formatters.Add(specifier, formatter);
 		}
@@ -228,8 +262,8 @@ namespace printf {
 					}
 					FormatResult afterSpecifiers = formatters[f.specifier].Invoke(f, args[j]);
 					int pad = f.width - afterSpecifiers.Format.Length - afterSpecifiers.Sign.Length;
-					if (pad > 0 && (f.flags & Flags.LeftAlign) == 0) {
-						if ((f.flags & Flags.LeftPadZero) != 0) {
+					if (pad > 0 && !f.LeftAlign) {
+						if (f.PadWithZero) {
 							final.Append(afterSpecifiers.Sign);
 							final.Append(new string('0', pad));
 						}
@@ -242,7 +276,7 @@ namespace printf {
 						final.Append(afterSpecifiers.Sign);
 					}
 					final.Append(afterSpecifiers.Format);
-					if (pad > 0 && (f.flags & Flags.LeftAlign) != 0) {
+					if (pad > 0 && f.LeftAlign) {
 						final.Append(new string(' ', pad));
 					}
 				}
@@ -254,13 +288,26 @@ namespace printf {
 			}
 		}
 
+		/// <summary>
+		/// Returns the formatted string.
+		/// </summary>
+		/// <returns>The formatted string</returns>
 		public override string ToString() {
 			if (this.finalString == null) DoFormat();
 			return finalString;
 		}
 
+		/// <summary>
+		/// The results of the Formatter type functions.
+		/// </summary>
 		public struct FormatResult {
+			/// <summary>
+			/// The resulting strings sign, if any.
+			/// </summary>
 			public string Sign {get; set;}
+			/// <summary>
+			/// The resulting string, without the sign if any.
+			/// </summary>
 			public string Format {get; set;}
 
 			public static implicit operator FormatResult(string s) {
@@ -293,8 +340,8 @@ namespace printf {
 				long i = Convert.ToInt64(arg);
 				string sign = "";
 				if (i >= 0) {
-					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
-					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+					if (part.ForcePlus) sign = "+";
+					else if (part.BlankIfPlus) sign = " ";
 				}
 				else {
 					i = -i;
@@ -308,8 +355,8 @@ namespace printf {
 				ulong u = Convert.ToUInt64(arg);
 				string sign = "";
 				if (u >= 0) {
-					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
-					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+					if (part.ForcePlus) sign = "+";
+					else if (part.BlankIfPlus) sign = " ";
 				}
 				return new FormatResult { Format = IntPrecision(u.ToString(), part) , Sign = sign };
 			};
@@ -318,8 +365,8 @@ namespace printf {
 				double d = Convert.ToDouble(arg);
 				string sign = "";
 				if (d >= 0) {
-					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
-					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+					if (part.ForcePlus) sign = "+";
+					else if (part.BlankIfPlus) sign = " ";
 				}
 				else {
 					d = -d;
@@ -331,7 +378,7 @@ namespace printf {
 				                           "+000"),
 				                           format);
 				//# flag: place decimal point even if not needed
-				if ((part.flags & Flags.HashMark) != 0 && !retStr.Contains(format.NumberDecimalSeparator)) {
+				if (part.HashMark && !retStr.Contains(format.NumberDecimalSeparator)) {
 					retStr = string.Join(format.NumberDecimalSeparator + part.specifier,
 					                     retStr.Split(part.specifier));
 				}
@@ -346,8 +393,8 @@ namespace printf {
 				double d = Convert.ToDouble(arg);
 				string sign = "";
 				if (d >= 0) {
-					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
-					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
+					if (part.ForcePlus) sign = "+";
+					else if (part.BlankIfPlus) sign = " ";
 				}
 				else {
 					d = -d;
@@ -356,7 +403,7 @@ namespace printf {
 				format.NumberDecimalDigits = part.precision ?? DefaultPrecision;
 				string retStr = d.ToString("f", format);
 				//# flag: place decimal point even if not needed
-				if ((part.flags & Flags.HashMark) != 0 && !retStr.Contains(format.NumberDecimalSeparator)) {
+				if (part.HashMark && !retStr.Contains(format.NumberDecimalSeparator)) {
 					retStr += format.NumberDecimalSeparator;
 				}
 				return new FormatResult { Format = retStr, Sign = sign };
@@ -366,7 +413,7 @@ namespace printf {
 				long l = Convert.ToInt64(arg);
 				string retStr = IntPrecision(Convert.ToString(l, 8), part);
 				//# flag: put a 0 before tha number
-				if ((part.flags & Flags.HashMark) != 0) {
+				if (part.HashMark) {
 					return "0" + retStr;
 				}
 				else {
@@ -395,7 +442,7 @@ namespace printf {
 					             i);
 				}
 				//# flag: put a 0x before tha number
-				if ((part.flags & Flags.HashMark) != 0) {
+				if (part.HashMark) {
 					return "0" + part.specifier + IntPrecision(retStr, part);
 				}
 				else {

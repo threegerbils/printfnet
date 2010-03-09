@@ -3,13 +3,35 @@ using System;
 
 namespace printf {
 	/// <summary>
-	/// Description of Printf.
+	/// Contains the printf family of functions.
+	/// It supports the following formats: 'diufeExXoscp';
+	/// The following flags: '-+ #0';
+	/// Width and precision;
+	/// Length specifiers for hexadecimal output (for other formats, integers are treated as Int64 or UInt64)
+	/// 
+	/// Decimal separator is not localized, it is always a '.' character.
+	/// 
+	/// At the moment, it does NOT support %n (number of chars printed, through a prointer),
+	/// %g and %G formats, and the 1$..n$ position specifier.
 	/// </summary>
 	public static class Printf {
+		/// <summary>
+		/// Formats the arguments according to the format string.
+		/// Returns the result as a string.
+		/// </summary>
+		/// <param name="format">The format string</param>
+		/// <param name="args">The objects to format</param>
+		/// <returns>The formatted output</returns>
+		/// <exception cref="ArgumentException">The format string is invalid or too few arguments provided.</exception>
 		public static string sprintf(string format, params object[] args) {
-			FormatObject f = new FormatObject(format);
-			f.Add(args);
-			return f.ToString();
+			try {
+				FormatObject f = new FormatObject(format);
+				f.SetArgs(args);
+				return f.ToString();
+			}
+			catch(InvalidOperationException ex) {
+				throw new ArgumentException("Error in format string, see inner exception for details", ex);
+			}
 		}
 	}
 }

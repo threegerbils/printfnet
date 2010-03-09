@@ -41,9 +41,9 @@ namespace printf {
 			                                     });
 
 			//Invalid format string
-			Assert.Throws<InvalidOperationException>(delegate() {
-			            Printf.sprintf("%z", new IntPtr());
-			        });
+			Assert.Throws<ArgumentException>(delegate() {
+			                                     Printf.sprintf("%z", new IntPtr());
+			                                 });
 
 			Assert.AreEqual("%",
 			                Printf.sprintf("%%"));
@@ -75,19 +75,19 @@ namespace printf {
 			                        Printf.sprintf("%d %d", 1, 2, 3);
 			                    });
 			//Less arguments should raise error
-			Assert.Throws<InvalidOperationException>(delegate() {
-			            Printf.sprintf("%d %d", 1);
-			        });
+			Assert.Throws<ArgumentException>(delegate() {
+			                                     Printf.sprintf("%d %d", 1);
+			                                 });
 			//Also check for the extra arguments required for *
-			Assert.Throws<InvalidOperationException>(delegate() {
-			            Printf.sprintf("%*d", 1);
-			        });
-			Assert.Throws<InvalidOperationException>(delegate() {
-			            Printf.sprintf("%.*d", 1);
-			        });
-			Assert.Throws<InvalidOperationException>(delegate() {
-			            Printf.sprintf("%*.*d", 1, 2);
-			        });
+			Assert.Throws<ArgumentException>(delegate() {
+			                                     Printf.sprintf("%*d", 1);
+			                                 });
+			Assert.Throws<ArgumentException>(delegate() {
+			                                     Printf.sprintf("%.*d", 1);
+			                                 });
+			Assert.Throws<ArgumentException>(delegate() {
+			                                     Printf.sprintf("%*.*d", 1, 2);
+			                                 });
 			Assert.DoesNotThrow(delegate() {
 			                        Printf.sprintf("%*.*d", 1, 2, 3);
 			                    });
@@ -133,7 +133,7 @@ namespace printf {
 			Assert.AreEqual("-11  22",
 			                Printf.sprintf("% d % d", -11, 22));
 		}
-		
+
 		[Test]
 		public void TestPrecision() {
 			//INTEGERS: minimum number of digits
@@ -156,7 +156,7 @@ namespace printf {
 			//Mixing:
 			Assert.AreEqual("  001",
 			                Printf.sprintf("%5.3d", 1));
-			
+
 			//Zero:
 			Assert.AreEqual("00",
 			                Printf.sprintf("%.2d", 0));
@@ -164,7 +164,7 @@ namespace printf {
 			                Printf.sprintf("%.0d", 0));
 			Assert.AreEqual("",
 			                Printf.sprintf("%.d", 0));
-			
+
 			//Floating point:
 			Assert.AreEqual("0.1235",
 			                Printf.sprintf("%.4f", 0.123456));
@@ -175,7 +175,7 @@ namespace printf {
 			                Printf.sprintf("%6.3f", 0.123));
 			Assert.AreEqual("0.123",
 			                Printf.sprintf("%4.3f", 0.123));
-			
+
 			//Scientific:
 			Assert.AreEqual("1.2346e-001",
 			                Printf.sprintf("%.4e", 0.123456));
@@ -186,8 +186,8 @@ namespace printf {
 			                Printf.sprintf("%4.3e", 0.123456));
 			Assert.AreEqual("     1.235e-001",
 			                Printf.sprintf("%15.3e", 0.123456));
-			
-			
+
+
 			//String:
 			Assert.AreEqual("asd",
 			                Printf.sprintf("%.3s", "asdfjkl"));
@@ -197,13 +197,13 @@ namespace printf {
 			Assert.AreEqual("   asd",
 			                Printf.sprintf("%6.3s", "asdfjkl"));
 		}
-		
+
 		[Test]
 		public void TestHashMark() {
 			//Prefix for o, h and H
 			Assert.AreEqual("011 0xff 0XABC",
 			                Printf.sprintf("%#o %#x %#X", 9, 0xff, 0xabc));
-			
+
 			//Decimal point for f, e and E
 			Assert.AreEqual("1. 2.e+000 3.E+000",
 			                Printf.sprintf("%#.0f %#.0e %#.0E", 1.1, 2.1, 3.1));
