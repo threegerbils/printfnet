@@ -8,10 +8,12 @@ namespace printf {
 	/// Description of FormatObject.
 	/// </summary>
 	public class FormatObject {
+		public const int DefaultPrecision = 6;
+
 		public class FormatStringPart {
 			public Flags flags;
 			public int width = 0;
-			public int precision = 6;
+			public int? precision;
 			public char length;
 			public char specifier;
 		}
@@ -268,6 +270,16 @@ namespace printf {
 			}
 		}
 
+		private string IntPrecision(string str, FormatStringPart part) {
+			if (str.Equals("0") && part.precision == 0) return "";
+			else if (str.Length < part.precision) {
+				return new string('0', (part.precision ?? 1) - str.Length) + str;
+			}
+			else {
+				return str;
+			}
+		}
+
 		private void LoadDefaultFormatters() {
 			var format = new System.Globalization.NumberFormatInfo();
 			format.NumberDecimalSeparator = ".";
@@ -288,7 +300,7 @@ namespace printf {
 					i = -i;
 					sign = "-";
 				}
-				return new FormatResult { Format = i.ToString(), Sign = sign };
+				return new FormatResult { Format = IntPrecision(i.ToString(), part), Sign = sign };
 			};
 			AddFormatter('i', intFormatter);
 			AddFormatter('d', intFormatter);
@@ -299,7 +311,7 @@ namespace printf {
 					if ((part.flags & Flags.ForcePlus) != 0) sign = "+";
 					else if ((part.flags & Flags.BlankIfPlus) != 0) sign = " ";
 				}
-				return new FormatResult { Format = u.ToString(), Sign = sign };
+				return new FormatResult { Format = IntPrecision(u.ToString(), part) , Sign = sign };
 			};
 			AddFormatter('u', uintFormatter);
 			Formatter sciFormatter = (part, arg) => {
@@ -313,8 +325,14 @@ namespace printf {
 					d = -d;
 					sign = "-";
 				}
-				format.NumberDecimalDigits = part.precision;
-				return new FormatResult { Format = d.ToString(part.specifier.ToString(), format), Sign = sign };
+				return new FormatResult {
+					Format = d.ToString(string.Concat("0.",
+					                                  new string('0', part.precision ?? DefaultPrecision),
+					                                  part.specifier.ToString(),
+					                                  "+000"),
+					                    format),
+					Sign = sign
+				};
 			};
 			AddFormatter('e', sciFormatter);
 			AddFormatter('E', sciFormatter);
@@ -329,39 +347,46 @@ namespace printf {
 					d = -d;
 					sign = "-";
 				}
-				format.NumberDecimalDigits = part.precision;
+				format.NumberDecimalDigits = part.precision ?? DefaultPrecision;
 				return new FormatResult { Format = d.ToString("f", format), Sign = sign };
 			};
 			AddFormatter('f', floatFormatter);
 			Formatter octFormatter = (part, arg) => {
 				long l = Convert.ToInt64(arg);
-				return Convert.ToString(l, 8);
+				return IntPrecision(Convert.ToString(l, 8), part);
 			};
 			AddFormatter('o', octFormatter);
 			Formatter hexFormatter = (part, arg) => {
+				string retStr;
 				if (part.length == 'h') {
 					short s = Convert.ToInt16(arg);
-					return string.Format(
-					           part.specifier == 'x' ? "{0:x}" : "{0:X}",
-					           s);
+					retStr = string.Format(
+					             part.specifier == 'x' ? "{0:x}" : "{0:X}",
+					             s);
 				}
 				else if (part.length == 'l') {
 					long l = Convert.ToInt64(arg);
-					return string.Format(
-					           part.specifier == 'x' ? "{0:x}" : "{0:X}",
-					           l);
+					retStr = string.Format(
+					             part.specifier == 'x' ? "{0:x}" : "{0:X}",
+					             l);
 				}
 				else {
 					int i = Convert.ToInt32(arg);
-					return string.Format(
-					           part.specifier == 'x' ? "{0:x}" : "{0:X}",
-					           i);
+					retStr = string.Format(
+					             part.specifier == 'x' ? "{0:x}" : "{0:X}",
+					             i);
 				}
+				return IntPrecision(retStr, part);
 			};
 			AddFormatter('x', hexFormatter);
 			AddFormatter('X', hexFormatter);
 			Formatter strFormatter = (part, arg) => {
-				return arg.ToString();
+				if (part.precision != null) {
+					return arg.ToString().Remove(part.precision.Value);
+				}
+				else {
+					return arg.ToString();
+				}
 			};
 			AddFormatter('s', strFormatter);
 			Formatter ptrFormatter = (part, arg) => {
@@ -369,7 +394,7 @@ namespace printf {
 			};
 			AddFormatter('p', ptrFormatter);
 			AddFormatter('n', (part, arg) => {
-			    throw new NotSupportedException("Getting the number of cahracters is not supported");
+			    throw new NotSupportedException("Getting the number of characters is not supported");
 			});
 		}
 	}

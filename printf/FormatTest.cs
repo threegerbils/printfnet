@@ -40,6 +40,7 @@ namespace printf {
 			                                         Printf.sprintf("%n", new IntPtr());
 			                                     });
 
+			//Invalid format string
 			Assert.Throws<InvalidOperationException>(delegate() {
 			            Printf.sprintf("%z", new IntPtr());
 			        });
@@ -118,7 +119,7 @@ namespace printf {
 		}
 
 		[Test]
-		public void TestNumbers() {
+		public void TestSign() {
 			//Sign of number
 			Assert.AreEqual("-5",
 			                Printf.sprintf("%d", -5));
@@ -131,6 +132,70 @@ namespace printf {
 			//Insert space if there is no sign
 			Assert.AreEqual("-11  22",
 			                Printf.sprintf("% d % d", -11, 22));
+		}
+		
+		[Test]
+		public void TestPrecision() {
+			//INTEGERS: minimum number of digits
+			Assert.AreEqual("123",
+			                Printf.sprintf("%.2d", 123));
+			Assert.AreEqual("ff",
+			                Printf.sprintf("%.1x", 0xff));
+			//Padding with 0
+			Assert.AreEqual("0044",
+			                Printf.sprintf("%.4d", 44));
+			Assert.AreEqual("000FF",
+			                Printf.sprintf("%.5X", 0xff));
+			Assert.AreEqual("003",
+			                Printf.sprintf("%.3u", 3));
+			Assert.AreEqual("0010",
+			                Printf.sprintf("%.4o", 8));
+			//Sign is not included:
+			Assert.AreEqual("-01",
+			                Printf.sprintf("%.2d", -1));
+			//Mixing:
+			Assert.AreEqual("  001",
+			                Printf.sprintf("%5.3d", 1));
+			
+			//Zero:
+			Assert.AreEqual("00",
+			                Printf.sprintf("%.2d", 0));
+			Assert.AreEqual("",
+			                Printf.sprintf("%.0d", 0));
+			Assert.AreEqual("",
+			                Printf.sprintf("%.d", 0));
+			
+			//Floating point:
+			Assert.AreEqual("0.1235",
+			                Printf.sprintf("%.4f", 0.123456));
+			Assert.AreEqual("0",
+			                Printf.sprintf("%.0f", 0.123456));
+			//Mixing:
+			Assert.AreEqual(" 0.123",
+			                Printf.sprintf("%6.3f", 0.123));
+			Assert.AreEqual("0.123",
+			                Printf.sprintf("%4.3f", 0.123));
+			
+			//Scientific:
+			Assert.AreEqual("1.2346e-001",
+			                Printf.sprintf("%.4e", 0.123456));
+			Assert.AreEqual("1e-001",
+			                Printf.sprintf("%.0e", 0.123456));
+			//Mixing:
+			Assert.AreEqual("1.235e-001",
+			                Printf.sprintf("%4.3e", 0.123456));
+			Assert.AreEqual("     1.235e-001",
+			                Printf.sprintf("%15.3e", 0.123456));
+			
+			
+			//String:
+			Assert.AreEqual("asd",
+			                Printf.sprintf("%.3s", "asdfjkl"));
+			Assert.AreEqual("",
+			                Printf.sprintf("%.s", "asdfjkl"));
+			//Mixing:
+			Assert.AreEqual("   asd",
+			                Printf.sprintf("%6.3s", "asdfjkl"));
 		}
 	}
 }
