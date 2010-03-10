@@ -7,12 +7,14 @@ namespace printf {
 	/// It supports the following formats: 'diufeExXoscp';
 	/// The following flags: '-+ #0';
 	/// Width and precision;
-	/// Length specifiers for hexadecimal output (for other formats, integers are treated as Int64 or UInt64)
+	/// Length (h, l) for hexadecimal output (for other formats, integers are treated as Int64 or UInt64)
 	/// 
 	/// Decimal separator is not localized, it is always a '.' character.
+	/// %g and %G does not remove trailing zeroes.
+	/// NaN and infinities are not guaranteed to have a fixed representation accross platforms.
 	/// 
 	/// At the moment, it does NOT support %n (number of chars printed, through a prointer),
-	/// %g and %G formats, and the 1$..n$ position specifier.
+	///  and the 1$..n$ position specifier.
 	/// </summary>
 	public static class Printf {
 		/// <summary>

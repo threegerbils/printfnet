@@ -364,7 +364,7 @@ namespace printf {
 			Formatter sciFormatter = (part, arg) => {
 				double d = Convert.ToDouble(arg);
 				string sign = "";
-				if (d >= 0) {
+				if (d >= 0 || double.IsNaN(d)) {
 					if (part.ForcePlus) sign = "+";
 					else if (part.BlankIfPlus) sign = " ";
 				}
@@ -409,6 +409,29 @@ namespace printf {
 				return new FormatResult { Format = retStr, Sign = sign };
 			};
 			AddFormatter('f', floatFormatter);
+
+			Formatter gFormatter = (part, arg) => {
+				double d = Convert.ToDouble(arg);
+				string sign = "";
+				if (d >= 0) {
+					if (part.ForcePlus) sign = "+";
+					else if (part.BlankIfPlus) sign = " ";
+				}
+				else {
+					d = -d;
+					sign = "-";
+				}
+				format.NumberDecimalDigits = part.precision ?? DefaultPrecision;
+				/*string formatString = part.specifier.ToString() + part.precision.ToString() +
+				                      (part.HashMark ? ":0." + new string('#', part.precision ?? DefaultPrecision) : "");
+				string retStr = string.Format(format, formatString, d);*/
+				//Could not make it work
+				string retStr = d.ToString(part.specifier.ToString() + part.precision.ToString(), format);
+				return new FormatResult { Format = retStr, Sign = sign };
+			};
+			AddFormatter('g', gFormatter);
+			AddFormatter('G', gFormatter);
+
 			Formatter octFormatter = (part, arg) => {
 				long l = Convert.ToInt64(arg);
 				string retStr = IntPrecision(Convert.ToString(l, 8), part);

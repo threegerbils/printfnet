@@ -214,6 +214,28 @@ namespace printf {
 			Assert.AreEqual("0x0ab",
 			                Printf.sprintf("%#05x", 0xab));
 		}
+		
+		[Test]
+		public void TestGSpecifier() {
+			Assert.AreEqual("0.0001",
+			                Printf.sprintf("%g", 0.0001));
+			Assert.AreEqual("1e-05",
+			                Printf.sprintf("%g", 0.00001));
+			Assert.AreEqual("1E-05",
+			                Printf.sprintf("%G", 0.00001));
+			
+			//Trailing zeros
+			Assert.AreEqual("0.01",
+			                Printf.sprintf("%.3g", 0.01));
+			Assert.AreEqual("0.010",
+			                Printf.sprintf("%.3f", 0.01));
+			//Assert.AreEqual("0.010",
+			//                Printf.sprintf("%#.3g", 0.01));
+			
+			//Precision = significant digits
+			Assert.AreEqual("     10.1",
+			                Printf.sprintf("%9.3g", 10.111111));
+		}
 	}
 }
 #endif
