@@ -209,6 +209,10 @@ namespace printf {
 			                Printf.sprintf("%#.0f %#.0e %#.0E", 1.1, 2.1, 3.1));
 			Assert.AreEqual("1.1 2.1e+000 3.1E+000",
 			                Printf.sprintf("%#.1f %#.1e %#.1E", 1.1, 2.1, 3.1));
+			
+			//Mixing with 0 and padding
+			Assert.AreEqual("0x0ab",
+			                Printf.sprintf("%#05x", 0xab));
 		}
 	}
 }

@@ -442,12 +442,10 @@ namespace printf {
 					             i);
 				}
 				//# flag: put a 0x before tha number
-				if (part.HashMark) {
-					return "0" + part.specifier + IntPrecision(retStr, part);
-				}
-				else {
-					return IntPrecision(retStr, part);
-				}
+				return new FormatResult {
+					Format = IntPrecision(retStr, part),
+					Sign = part.HashMark ? "0" + part.specifier : ""
+				};
 			};
 			AddFormatter('x', hexFormatter);
 			AddFormatter('X', hexFormatter);
