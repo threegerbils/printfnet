@@ -25,15 +25,45 @@ namespace printf {
 		/// <param name="args">The objects to format</param>
 		/// <returns>The formatted output</returns>
 		/// <exception cref="ArgumentException">The format string is invalid or too few arguments provided.</exception>
+		/// <exception cref="ArgumentNullException">Format string is null</exception>
 		public static string sprintf(string format, params object[] args) {
+			if (format == null) throw new ArgumentNullException("format");
 			try {
 				FormatObject f = new FormatObject(format);
 				f.SetArgs(args);
 				return f.ToString();
 			}
 			catch(InvalidOperationException ex) {
-				throw new ArgumentException("Error in format string, see inner exception for details", ex);
+				throw new ArgumentException("Error in format string or arguments, see inner exception for details", ex);
 			}
+		}
+		
+		/// <summary>
+		/// Formats the arguments according to the format string,
+		/// and writes the formatted string to the standard output.
+		/// </summary>
+		/// <param name="format">The format string</param>
+		/// <param name="args">The objects to format</param>
+		/// <exception cref="ArgumentException">The format string is invalid or too few arguments provided.</exception>
+		/// <exception cref="ArgumentNullException">Format string is null</exception>
+		public static void printf(string format, params object[] args) {
+			if (format == null) throw new ArgumentNullException("format");
+			Console.Write(sprintf(format, args));
+		}
+		
+		/// <summary>
+		/// Formats the arguments according to the format string,
+		/// and writes the formatted string to the specified TextWriter.
+		/// </summary>
+		/// <param name="writer">The target TextWriter</param>
+		/// <param name="format">The format string</param>
+		/// <param name="args">The objects to format</param>
+		/// <exception cref="ArgumentException">The format string is invalid or too few arguments provided.</exception>
+		/// <exception cref="ArgumentNullException">Format string or TextWriter is null</exception>
+		public static void fprintf(System.IO.TextWriter writer, string format, params object[] args) {
+			if (format == null) throw new ArgumentNullException("format");
+			if (writer == null) throw new ArgumentNullException("writer");
+			writer.Write(sprintf(format, args));
 		}
 	}
 }

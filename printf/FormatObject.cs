@@ -9,18 +9,53 @@ namespace printf {
 	/// Can be extended to use custom formats.
 	/// </summary>
 	public class FormatObject {
+		///<summary>
+		/// The default precision for floating point numbers
+		/// </summary>
 		public const int DefaultPrecision = 6;
 
+		/// <summary>
+		/// Represents a formatting part of the format string (i.e. %1.3d)
+		/// All fields are interpreted as specified in the C language specification
+		/// </summary>
 		public class FormatStringPart {
+			/// <summary>
+			/// Minimum width
+			/// </summary>
 			public int width = 0;
+			/// <summary>
+			/// Precision
+			/// </summary>
 			public int? precision;
+			/// <summary>
+			/// Length (h or l)
+			/// </summary>
 			public char length;
+			/// <summary>
+			/// Specifier (s for strings, d for integers etc.)
+			/// </summary>
 			public char specifier;
 
+			/// <summary>
+			/// Left aligns the result instead of the default right align
+			/// </summary>
 			public bool LeftAlign = false;
+			/// <summary>
+			/// Displays + cahracter for positive numbers (by default it is omitted)
+			/// </summary>
 			public bool ForcePlus = false;
+			/// <summary>
+			/// Displays ' ' (space) character for positive numbers (by default it is omitted)
+			/// </summary>
 			public bool BlankIfPlus = false;
+			/// <summary>
+			/// Has different meanings for format specifiers
+			/// </summary>
 			public bool HashMark = false;
+			/// <summary>
+			/// If LeftAlign = false, pads with the '0' character instead of ' '.
+			/// If LeftAlign = true, this flag is ignored.
+			/// </summary>
 			public bool PadWithZero = false;
 		}
 
@@ -261,7 +296,7 @@ namespace printf {
 						j++;
 					}
 					FormatResult afterSpecifiers = formatters[f.specifier].Invoke(f, args[j]);
-					int pad = f.width - afterSpecifiers.Format.Length - afterSpecifiers.Sign.Length;
+					int pad = f.width - afterSpecifiers.Result.Length - afterSpecifiers.Sign.Length;
 					if (pad > 0 && !f.LeftAlign) {
 						if (f.PadWithZero) {
 							final.Append(afterSpecifiers.Sign);
@@ -275,7 +310,7 @@ namespace printf {
 					else {
 						final.Append(afterSpecifiers.Sign);
 					}
-					final.Append(afterSpecifiers.Format);
+					final.Append(afterSpecifiers.Result);
 					if (pad > 0 && f.LeftAlign) {
 						final.Append(new string(' ', pad));
 					}
@@ -308,11 +343,18 @@ namespace printf {
 			/// <summary>
 			/// The resulting string, without the sign if any.
 			/// </summary>
-			public string Format {get; set;}
+			public string Result {get; set;}
 
+			/// <summary>
+			/// Converts to string into a FormatResult object.
+			/// The string is assigned to the Result property of the created FormatString,
+			/// the Sign property will be "" (empty string).
+			/// </summary>
+			/// <param name="s">The string to convert</param>
+			/// <returns>A FormatResult object</returns>
 			public static implicit operator FormatResult(string s) {
 				return new FormatResult {
-					Sign = "", Format = s
+					Sign = "", Result = s
 				};
 			}
 		}
@@ -347,7 +389,7 @@ namespace printf {
 					i = -i;
 					sign = "-";
 				}
-				return new FormatResult { Format = IntPrecision(i.ToString(), part), Sign = sign };
+				return new FormatResult { Result = IntPrecision(i.ToString(), part), Sign = sign };
 			};
 			AddFormatter('i', intFormatter);
 			AddFormatter('d', intFormatter);
@@ -358,7 +400,7 @@ namespace printf {
 					if (part.ForcePlus) sign = "+";
 					else if (part.BlankIfPlus) sign = " ";
 				}
-				return new FormatResult { Format = IntPrecision(u.ToString(), part) , Sign = sign };
+				return new FormatResult { Result = IntPrecision(u.ToString(), part) , Sign = sign };
 			};
 			AddFormatter('u', uintFormatter);
 			Formatter sciFormatter = (part, arg) => {
@@ -383,7 +425,7 @@ namespace printf {
 					                     retStr.Split(part.specifier));
 				}
 				return new FormatResult {
-					Format = retStr,
+					Result = retStr,
 					Sign = sign
 				};
 			};
@@ -406,7 +448,7 @@ namespace printf {
 				if (part.HashMark && !retStr.Contains(format.NumberDecimalSeparator)) {
 					retStr += format.NumberDecimalSeparator;
 				}
-				return new FormatResult { Format = retStr, Sign = sign };
+				return new FormatResult { Result = retStr, Sign = sign };
 			};
 			AddFormatter('f', floatFormatter);
 
@@ -427,7 +469,7 @@ namespace printf {
 				string retStr = string.Format(format, formatString, d);*/
 				//Could not make it work
 				string retStr = d.ToString(part.specifier.ToString() + part.precision.ToString(), format);
-				return new FormatResult { Format = retStr, Sign = sign };
+				return new FormatResult { Result = retStr, Sign = sign };
 			};
 			AddFormatter('g', gFormatter);
 			AddFormatter('G', gFormatter);
@@ -466,7 +508,7 @@ namespace printf {
 				}
 				//# flag: put a 0x before tha number
 				return new FormatResult {
-					Format = IntPrecision(retStr, part),
+					Result = IntPrecision(retStr, part),
 					Sign = part.HashMark ? "0" + part.specifier : ""
 				};
 			};
